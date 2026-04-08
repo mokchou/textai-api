@@ -1,0 +1,221 @@
+openapi: "3.0.3"
+info:
+  title: TextAI API
+  description: |
+    Pay-per-use AI text processing API. Summarize, extract keywords, and translate
+    text with simple REST calls. Pay only for what you use with USDC micropayments
+    on Solana — no subscription, no account required beyond an API key.
+    
+    Start with 100 free demo credits. Top up with USDC at `/credits/buy`.
+  version: "1.0.0"
+  contact:
+    url: https://textai-api.overtek.deno.net/landing
+  x-logo:
+    url: https://textai-api.overtek.deno.net/landing
+servers:
+  - url: https://textai-api.overtek.deno.net
+    description: Production (Deno Deploy)
+security:
+  - ApiKeyAuth: []
+paths:
+  /keys/create:
+    post:
+      summary: Create API key
+      description: Creates a new API key with 100 free demo credits. No authentication required.
+      operationId: createApiKey
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: Optional human-readable label
+                  example: my-project
+      responses:
+        "200":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    example: sk_abc123...
+                  credits:
+                    type: integer
+                    example: 100
+                  demo:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+  /summarize:
+    post:
+      summary: Summarize text
+      description: Condense any text to N sentences. Costs 10 credits ($0.01).
+      operationId: summarizeText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: Text to summarize
+                sentences:
+                  type: integer
+                  default: 3
+                  description: Target number of sentences in summary
+      responses:
+        "200":
+          description: Summary result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TextResult"
+        "402":
+          $ref: "#/components/responses/InsufficientCredits"
+  /keywords:
+    post:
+      summary: Extract keywords
+      description: Extract top keywords and phrases from text. Costs 5 credits ($0.005).
+      operationId: extractKeywords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                limit:
+                  type: integer
+                  default: 10
+                  description: Maximum number of keywords to return
+      responses:
+        "200":
+          description: Keywords result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TextResult"
+        "402":
+          $ref: "#/components/responses/InsufficientCredits"
+  /translate:
+    post:
+      summary: Translate text
+      description: Translate text to one of 10 supported languages. Costs 15 credits ($0.015).
+      operationId: translateText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, targetLang]
+              properties:
+                text:
+                  type: string
+                targetLang:
+                  type: string
+                  enum: [es, fr, de, it, pt, ja, zh, ko, ar, ru]
+                  description: Target language code
+      responses:
+        "200":
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TextResult"
+        "402":
+          $ref: "#/components/responses/InsufficientCredits"
+  /credits/buy:
+    post:
+      summary: Buy credits with USDC
+      description: Returns a Solana wallet address and memo to send USDC. Credits are topped up automatically after payment confirmation.
+      operationId: buyCredits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  description: Amount in USDC to spend (minimum 0.01)
+                  example: 1.00
+      responses:
+        "200":
+          description: Payment instructions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallet:
+                    type: string
+                    description: Solana wallet address to send USDC to
+                  memo:
+                    type: string
+                    description: Memo to include with the transaction
+                  credits:
+                    type: integer
+                    description: Credits that will be added upon confirmation
+  /credits/balance:
+    get:
+      summary: Get credit balance
+      operationId: getBalance
+      responses:
+        "200":
+          description: Current balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credits:
+                    type: integer
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    TextResult:
+      type: object
+      properties:
+        result:
+          type: string
+          description: Processed text output
+        creditsUsed:
+          type: integer
+        creditsRemaining:
+          type: integer
+  responses:
+    InsufficientCredits:
+      description: Insufficient credits — top up with USDC
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Insufficient credits
+              creditsRequired:
+                type: integer
+              creditsRemaining:
+                type: integer
