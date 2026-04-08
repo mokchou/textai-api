@@ -1,0 +1,22 @@
+{
+  "name": "micro-saas-api",
+  "version": "0.1.0",
+  "exports": "./src/index.ts",
+  "imports": {
+    "hono": "npm:hono@^4.4.0"
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-env --allow-read --allow-write --unstable-kv src/index.ts",
+    "dev": "deno run --watch --allow-net --allow-env --allow-read --allow-write --unstable-kv src/index.ts",
+    "wallet:setup": "deno run --allow-env scripts/setup-wallet.ts"
+  },
+  "deploy": {
+    "org": "overtek",
+    "app": "textai-api"
+  }
+}
+
+
+
+
+

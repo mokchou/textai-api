@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.local
+deploy-fly.sh
+fly.toml
+wrangler.toml
+Dockerfile
