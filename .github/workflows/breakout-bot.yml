@@ -1,0 +1,53 @@
+name: breakout-bot
+
+on:
+  push:
+    paths: ["breakout-bot/**", ".github/workflows/breakout-bot.yml"]
+  pull_request:
+    paths: ["breakout-bot/**", ".github/workflows/breakout-bot.yml"]
+  schedule:
+    - cron: "0 3 * * *" # nightly : tests lents (performance CU1)
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: breakout-bot/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Installer les dépendances
+        run: |
+          pip install -e . ruff mypy pytest httpx
+      - name: Lint (ruff)
+        run: |
+          ruff check app tests
+          ruff format --check app tests
+      - name: Types (mypy)
+        run: mypy app/engine app/execution app/backtest app/config app/metrics app/optimize app/adaptive
+      - name: Tests (anti-look-ahead BLOQUANT, fills table 6.4, reproductibilité)
+        run: pytest -m "not slow" -q
+      - name: Tests lents (perf < 60 s) — nightly uniquement
+        if: github.event_name == 'schedule'
+        run: pytest -m slow -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: breakout-bot/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Installer les dépendances
+        run: npm ci
+      - name: Types (tsc)
+        run: npx tsc --noEmit
+      - name: Build (vite)
+        run: npm run build
